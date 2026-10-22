@@ -1,6 +1,6 @@
 # P5｜原型与汇报｜交给本成员 AI 的完整执行文件
 
-规划版本：v4.1｜共享契约：1.2.0｜发布日期：2026-10-22。
+规划版本：v4.1.1｜共享契约：1.2.1｜发布日期：2026-10-22。
 
 **给成员：把本文件完整交给你的 AI 即可。** 你已被分配为 P5；仓库尚未分发时提供一个本地工作目录即可。后续如需换 AI，把本文件和 `coordination/STATUS_P5.md` 一起交给新 AI。
 
@@ -8,14 +8,14 @@
 
 本文件是自足说明；公共代码、原始数据、接口和模型结果是后续实施的交付物，目前未因出现在文中就自动存在。无需阅读其他成员文件或本次聊天才能理解任务。
 
-公共段 SHA-256：`572f472deab7b8c1c0aa68e24df5c3b82e38e46e7c32afb07af12d2aa0e56dc0`。共享接口变更应同步六份文件；不要只修改本文件中的公共字段。
+公共段 SHA-256：`6f21aec2c8fb4f9a2c4a4a660e8494393b8da2a8f31eed82ca1d743bda2d9351`。核验口径：取 BEGIN 标记行之后、END 标记行之前的完整正文，不含两行标记；换行统一为 LF，末尾保留且仅保留一个 LF，以 UTF-8 编码计算 SHA-256。该正文与 `01_统一执行契约.md` 一致，仅用本文件即可核验。共享接口变更应同步六份文件；不要只修改本文件中的公共字段。
 
 ---
 
 <!-- COMMON_CONTRACT_BEGIN -->
 # 统一执行契约与项目上下文
 
-规划版本：v4.1｜契约版本：1.2.0｜制定日期：2026-10-21｜定稿日期：2026-10-22｜日期时区：Asia/Shanghai。
+规划版本：v4.1.1｜契约版本：1.2.1｜制定日期：2026-10-21｜定稿日期：2026-10-22｜日期时区：Asia/Shanghai。
 
 这是实施规范，文中代码路径、数据和命令是成员随后必须创建的交付物，不代表系统已经实现。六份个人文件完整内嵌本契约；收到个人文件即可启动，不需要本次聊天记录或旧版规划。新规划取代旧版中的范围、数量、接口与排期约定。
 
@@ -70,7 +70,7 @@ P1 是集成负责人；P2 复核契约；P6 把关评测。成员姓名只需�
 
 ## C3. 给所有 AI 的执行协议
 
-1. 你是该角色的实施负责人。先读取已有文件、`coordination/STATUS_Pn.md` 和仓库状态；识别已完成工作后继续。用简短中文说明下一步，随后直接实施已授权的本地、可逆工作，不只输出建议或一次性倾倒代码。
+1. 你是该角色的实施负责人。先读取已有文件、`coordination/STATUS_Pn.md` 和仓库状态；识别已完成工作后继续。状态文件尚不存在时，先检查已有代码与成果，再创建该文件记录实际进度，不据此认定从零开始或覆盖已有工作。用简短中文说明下一步，随后直接实施已授权的本地、可逆工作，不只输出建议或一次性倾倒代码。
 2. 首次检查：操作系统、工作目录、文件读写、命令执行、网络/GitHub、Git、Python、模型通道；仅 P2/集成/演示机必须检查 Neo4j 环境。检测事实写入 `coordination/capabilities/Pn.json`，字段 `role,os,can_read,can_write,can_run,can_network,python,git,graph_access,model_access,checked_at`；未知为 null，不能把安装说明写成已安装。
 3. 无文件/命令能力时，提供一次一小组的操作、预期输出、需要回传的错误；成员只代为执行。不要重复询问已确定的技术路线。只问工作目录、仓库访问、密钥配置、真实阻塞等无法自行获得的信息。
 4. 上游缺失时先按本契约制作本地 fixture 或使用公共 fixture，继续纯逻辑、界面与契约测试；记录待真实联调项。缺上游不等于最终完成，不得用空函数、伪造数据或静默 mock 通过真实验收。
@@ -121,6 +121,7 @@ kgcourse/graph/ / kgcourse/service.py                           # P2
 kgcourse/evaluation/                                           # P6
 app/main.py                                                   # P5
 fixtures/fixture_v1/                                           # P1生成；其他人提交案例建议
+queries/                                                      # P2 查询请求样例，含 CLI 所用 example.json
 data/<dataset_id>/sources.jsonl / source_units.jsonl / manifest.json
 data/<dataset_id>/p1/nodes.jsonl / edges.jsonl
 data/<dataset_id>/p3/nodes.jsonl / edges.jsonl
@@ -215,7 +216,7 @@ P1 管理全局 sources.jsonl。P3 可基于已冻结 SHA 提取源码并写 `p3
 |---|---|---|
 | Repository / P1 | `slug,url` | repo / `[repo]` |
 | Version / P1 | `tag,commit_sha,released_at?` | version / `[repo,tag]` |
-| Person / P1 | `login,name?`；无法识别 GitHub login 时保留原文作者，不合并同名人 | person / `[repo,login]` |
+| Person / P1 | `login,name?`；仅在 GitHub login 可确认时建节点；无法确认时不建该 Person 及其 OPENED/AUTHORED 边，作者原始信息保留在对应的 api_metadata 来源原文中；不用姓名或占位字符串代替 login，不合并同名人 | person / `[repo,login]` |
 | Thread / P1 | `number:int,kind:issue或pr,title,state,author_login?,created_at?,closed_at?,merged:bool?,merged_at?,url,source_ids:list[str]`；issue 的 merged/merged_at=null | thread / `[repo,kind,str(number)]` |
 | Commit / P1 | `sha,parents:list[str],authored_at?,committed_at?,author_login?,message,url,source_ids:list[str]` | commit / `[repo,sha]` |
 | API / P3 | `canonical_name,aliases:list[str],kind:function或method或class,scope_note` | api / `[repo,首次登记的canonical_name]` |
@@ -267,7 +268,7 @@ P2 导入时按 NodeRecord.type 映射白名单标签，以 id 唯一；保存 d
 
 Python 入口：`from kgcourse.service import query`；`query(request: dict) -> dict`。不新增 HTTP 服务作为必需项。P5 不写 Cypher，P6 不依赖 P5 页面或一个不存在的“前端问答接口”。
 
-Request 固定：`{contract_version:'1.2.0',dataset_id,query,params}`。下表 params 中全部字段必填；字符串不允许空，limit 为 1–20 整数。
+Request 固定：`{contract_version:'1.2.1',dataset_id,query,params}`。下表 params 中全部字段必填；字符串不允许空，limit 为 1–20 整数。
 
 | query | params | items 每项的字段 |
 |---|---|---|
@@ -285,7 +286,7 @@ Response 固定字段：`contract_version,dataset_id,data_mode,query,status,summ
 - elapsed_ms 为本次调用的实际毫秒数；离线快照重放另记 replay，不冒充实时查询性能。
 - 所有证据 ID、路径 ID 应在响应或数据集中可解析。P2 发布每类成功、空结果、错误的固定 JSON 示例。P5 可读取冻结真实 response 导出包作明确标记的“离线真实快照”展示；fixture 必须单独显著标识“合成示例”。
 
-`timeline(api_id)`除时间线items外，必须在既有`nodes/edges/evidence`中返回该API的关联上下文：①所有指向该API的`MODIFIES`及Commit；②包含这些Commit的`CONTAINS`及PR；③这些PR通过`RESOLVES`关联的Issue；④通过`DISCUSSES`直接关联该API的Thread。返回所选边的全部端点及其证据；没有某类关系时保留已有部分并给warnings。仅共同关联API的讨论不能被连成PR/提交链。该约定不依赖`why`是否有Decision，未找到决策也能查看已核验的代码修改链。P5从返回的Thread节点取得`thread_id`后调用`trace`，不得自行猜编号或查询图库。P2须交付完整链、断链、无Decision但有修改链三种响应样例，供P5/P6直接消费。
+`timeline(api_id)`除时间线items外，必须在既有`nodes/edges/evidence`中返回该API的关联上下文：①所有指向该API的`MODIFIES`及Commit；②包含这些Commit的`CONTAINS`及PR；③这些PR通过`RESOLVES`关联的Issue；④通过`DISCUSSES`直接关联该API的Thread。返回所选边的全部端点及其证据；没有某类关系时保留已有部分并给warnings。仅共同关联API的讨论不能被连成PR/提交链。该约定不依赖`why`是否有Decision，未找到决策也能查看已核验的代码修改链。`trace.params.thread_id`即Thread NodeRecord顶层的`id`，不是`props.number`，也不是新增属性；P5从返回的Thread节点读取该`id`后调用`trace`，不得自行猜编号或查询图库。P2须交付完整链、断链、无Decision但有修改链三种响应样例，供P5/P6直接消费。
 
 自然语言入口：P2 实现 `resolve_question(text,dataset_id)` 返回 `{status,intent,params,normalized_text,warnings}`；intent 为以上查询名或 null；status=`ok|ambiguous|unsupported`。先匹配统一 API 别名、版本、Issue 编号与有限意图词，歧义让用户选实体，不假装任意问题都能回答。P6 两系统共用同一解析结果；不能把测试题人工标好的 query/params 仅喂给 KG 组。P2 的 query 不依赖 LLM；P6 的回答生成在检索后统一执行。
 
@@ -399,7 +400,6 @@ P1 必须实现 `fixture` 命令生成下述相同的合成小世界，路径 `f
 - PR、合并状态及关联提交读取：[GitHub 官方文档](https://docs.github.com/en/rest/pulls/pulls)；分页按实际端点支持与 Link 头实现，page 参数本身并非禁用：[分页文档](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)。
 - Neo4j Community 容器与持久化部署以官方说明核验：[Docker 文档](https://neo4j.com/docs/operations-manual/current/docker/introduction/)。
 - 对“检索增强方法也能进行多步问答”的论证边界可参考 [IRCoT 原论文](https://aclanthology.org/2023.acl-long.557/)。本项目不要求复现该论文。
-
 <!-- COMMON_CONTRACT_END -->
 
 ---
@@ -464,7 +464,7 @@ P2 对查询含义与返回值负责；P3/P4 对代码和讨论抽取负责；P1
 **动作：**
 - 选择目标 API，按三个固定快照展示其存在状态、位置与真实识别的变化。
 - 时间线或对照表展示变化发生在哪个可核验范围；不能把快照差异伪装成精确发生日期。
-- 在同一页面呈现相关提交、PR/Issue、决策结论与支持原文；关联上下文只取C6约定的timeline.nodes/edges/evidence，从Thread节点取得trace所需ID。why无Decision时仍显示已有修改链，缺失关联显示说明，不靠标题猜编号。
+- 在同一页面呈现相关提交、PR/Issue、决策结论与支持原文；关联上下文只取C6约定的timeline.nodes/edges/evidence，使用Thread NodeRecord顶层的id作为trace.params.thread_id。why无Decision时仍显示已有修改链，缺失关联显示说明，不靠标题猜编号。
 - 原文未明确解释原因时显示“未找到明确理由”，仍可展示已经证实的代码变化。
 - 仅显示已确认的身份连续关系；改名或迁移待确认时保留说明。
 **交付：** 一个完整 API 详情模板及全部正式目标 API 的可选择入口。
