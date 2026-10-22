@@ -1,0 +1,16 @@
+# Credentials and machine-local state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.venv/
+__pycache__/
+.DS_Store
+.idea/
+.vscode/
+# Test references and their private model runs stay with P6 until final release
+evaluation/private_test/
+# Generated raw data / model runs are distributed as versioned packages
+data/
+*.zip
