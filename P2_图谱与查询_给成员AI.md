@@ -1,6 +1,6 @@
 # P2｜图谱与查询｜交给本成员 AI 的完整执行文件
 
-规划版本：v4.1.1｜共享契约：1.2.1｜发布日期：2026-10-22。
+规划版本：v4.1.2｜共享契约：1.2.2｜发布日期：2026-10-22。
 
 **给成员：把本文件完整交给你的 AI 即可。** 你已被分配为 P2；仓库尚未分发时提供一个本地工作目录即可。后续如需换 AI，把本文件和 `coordination/STATUS_P2.md` 一起交给新 AI。
 
@@ -8,14 +8,14 @@
 
 本文件是自足说明；公共代码、原始数据、接口和模型结果是后续实施的交付物，目前未因出现在文中就自动存在。无需阅读其他成员文件或本次聊天才能理解任务。
 
-公共段 SHA-256：`6f21aec2c8fb4f9a2c4a4a660e8494393b8da2a8f31eed82ca1d743bda2d9351`。核验口径：取 BEGIN 标记行之后、END 标记行之前的完整正文，不含两行标记；换行统一为 LF，末尾保留且仅保留一个 LF，以 UTF-8 编码计算 SHA-256。该正文与 `01_统一执行契约.md` 一致，仅用本文件即可核验。共享接口变更应同步六份文件；不要只修改本文件中的公共字段。
+公共段 SHA-256：`bd35ed301e0f5a27a387aba73b1379556246a736b807239a1bd5ebaadc0c9e3b`。核验口径：取 BEGIN 标记行之后、END 标记行之前的完整正文，不含两行标记；换行统一为 LF，末尾保留且仅保留一个 LF，以 UTF-8 编码计算 SHA-256。该正文与 `01_统一执行契约.md` 一致，仅用本文件即可核验。共享接口变更应同步六份文件；不要只修改本文件中的公共字段。
 
 ---
 
 <!-- COMMON_CONTRACT_BEGIN -->
 # 统一执行契约与项目上下文
 
-规划版本：v4.1.1｜契约版本：1.2.1｜制定日期：2026-10-21｜定稿日期：2026-10-22｜日期时区：Asia/Shanghai。
+规划版本：v4.1.2｜契约版本：1.2.2｜制定日期：2026-10-21｜定稿日期：2026-10-22｜日期时区：Asia/Shanghai。
 
 这是实施规范，文中代码路径、数据和命令是成员随后必须创建的交付物，不代表系统已经实现。六份个人文件完整内嵌本契约；收到个人文件即可启动，不需要本次聊天记录或旧版规划。新规划取代旧版中的范围、数量、接口与排期约定。
 
@@ -199,12 +199,12 @@ CLI 调用的公共 Python 入口如下，P1 在骨架中先创建明确报 `NOT
 
 `SourceDocument`：`contract_version,dataset_id,repo,id,source_type,external_key,url,title,text,author_login?,created_at?,collected_at,content_sha256,thread_id?,version_id?,commit_sha?,file_path?,is_complete`。
 
-- `source_type` 枚举 `issue_body,pr_body,comment,review,release_note,code,commit,api_metadata`。每条评论/评审独立保存，不能丢掉作者、时间和原始链接。
-- `id=make_id('source',[repo,source_type,external_key])`；external_key 为来源的持久标识，如评论数值 ID、`SHA:path`、`tag:doc_path:section`。原文正文换行规范为 LF 后原样保存，`content_sha256` 对该 text 的 UTF-8 求 SHA-256。索引使用的清洗副本不得覆盖原文。
+- `source_type` 枚举 `issue_body,pr_body,comment,review,release_note,code,commit,api_metadata`。普通评论与行内评审评论均用 `comment`，评审主体用 `review`；external_key 分别为 `issue_comment:<id>`、`review_comment:<id>`、`review:<id>`，避免不同接口的数值 ID 混淆。每条评论、行内回复及评审主体独立保存，不能丢掉作者、时间和原始链接；不新增来源类型。
+- `id=make_id('source',[repo,source_type,external_key])`；external_key 为来源的持久标识，如上述带前缀的评论/评审 ID、`SHA:path`、`tag:doc_path:section`。原文正文换行规范为 LF 后原样保存，`content_sha256` 对该 text 的 UTF-8 求 SHA-256。索引使用的清洗副本不得覆盖原文。
 - `api_metadata` 保存必要的 API 结构化响应原文，支持已合并状态、PR 包含提交等事实核验；它不等于自然语言理由。
 - `SourceUnit`：`contract_version,dataset_id,repo,id,unit_type,source_ids,topic_group,split,is_complete,exclusion_reason?`；`unit_type=thread|release_section`，split=`unassigned|dev|test|excluded`；id=make_id('unit',[repo,unit_type,external_key])。P1 确保采集完整，P6 负责 topic_group、划分与排除记录。
 - 上述 SourceUnit external_key 固定：thread 为 `issue:<number>` 或 `pr:<number>`；release_section 为 `<tag>:<doc_path>:<section_anchor>`。id 生成输入由该规范确定，P6 不重新发明单元 ID。
-- 一条 thread 单元包含正文、截至冻结时间取得的全部普通评论和适用的 review；遗漏、权限失败、截断必须标记不完整，不能以部分文本评价“整串召回率”。
+- 一条 thread 单元包含正文及截至冻结时间取得的全部普通评论；PR 还必须包含全部已提交的评审主体（reviews）和行内评审评论及回复（review comments）。P1 分别采集普通评论、评审主体、行内评审评论接口并完成分页，保存各类计数与完成状态；某类确认为零可算完整，漏采、权限失败或截断则必须标记不完整，不能以部分文本评价“整串召回率”。
 
 P1 管理全局 sources.jsonl。P3 可基于已冻结 SHA 提取源码并写 `p3/sources.jsonl`，P1 的 io 合并器在 code 命令结束后校验/去重、合并全局来源并更新 manifest；相同 id 不同内容报冲突。P4/P2 只读合并后的来源。P1 提供 `merge_sources(dataset_id)` 给流水线调用，其他成员不并发手改全局文件。11 月 15 日冻结之后新增来源须走新数据版本；测试引用的来源不能原地变更。
 
@@ -268,7 +268,7 @@ P2 导入时按 NodeRecord.type 映射白名单标签，以 id 唯一；保存 d
 
 Python 入口：`from kgcourse.service import query`；`query(request: dict) -> dict`。不新增 HTTP 服务作为必需项。P5 不写 Cypher，P6 不依赖 P5 页面或一个不存在的“前端问答接口”。
 
-Request 固定：`{contract_version:'1.2.1',dataset_id,query,params}`。下表 params 中全部字段必填；字符串不允许空，limit 为 1–20 整数。
+Request 固定：`{contract_version:'1.2.2',dataset_id,query,params}`。下表 params 中全部字段必填；字符串不允许空，limit 为 1–20 整数。
 
 | query | params | items 每项的字段 |
 |---|---|---|
@@ -334,6 +334,8 @@ ChatGPT Plus/Pro 可用于成员各自的开发辅助；账号订阅不能直接
 
 QA出题先走同一网关的`task=reference,output_schema_name=QuestionSet_v1`；此时`unit_or_question_id`使用`questions:<topic_group>:<split>`，请求只含P6按主题组织的冻结原文（可含源码、发布说明和讨论）、已有source_id、目标题型与数量，不含生产预测。P6逐题校验非空正文、题型及来源ID，将text仅规范为LF并去除首尾空白，以`make_id('question',[dataset_id,topic_group,text])`赋question_id并去重。保存`QuestionRecord={contract_version,dataset_id,question_id,text,category,source_ids,topic_group,split,generation_run_id}`；topic_group与split由P6的冻结主题划分赋值，不能让模型自行划分。category枚举为`version_evolution|decision_rationale|cross_source_trace|insufficient_evidence`。问题表先存`evaluation/private_test/<dataset_id>/questions.jsonl`，仅开发题导出到`evaluation/dev/<dataset_id>/questions.jsonl`；测试运行给两系统的输入只有同一question_id/text及C8.4允许的共享解析结果，不给题型、选定来源ID、参考或可回答性。每题再以已保存的正文与question_id请求`ReferenceQA_v1`生成参考；参考复核不能悄悄改题。11月15日冻结问题正文及分组，11月29日冻结参考版本。P1实现QuestionRecord校验，P4注册QuestionSet_v1输出校验，P6负责出题、保存与评审。
 
+本版“证据不足”统一相对于两系统可检索的整个冻结来源池判定，QuestionRecord.source_ids 仅记录出题来源，不构成检索范围限制。P6须在11月15日冻结问题前，以当次冻结来源清单逐题完成全池可回答性核验及独立模型复核；可分批读取原文，但须保存覆盖的source_id/哈希、候选证据、模型请求与最终判断，不能把主题内无答案、检索无命中或模型不知道当作全池无证据。确认无法从全池支持答案的题才列为insufficient_evidence；有证据则按实际题型处理，未核完或仍unclear的候选不作为已确认的弃答题，须在冻结前处理并记录。后续来源版本变化须重核受影响问题，不根据两系统测试表现改题；不向生产侧暴露私有核验记录。
+
 | output_schema_name | 固定模型输出 | 程序处理 |
 |---|---|---|
 | `QuestionSet_v1` | `{questions:[{text,category,source_ids}]}` | P6校验题型与已提供的来源文档、赋ID和分组，保存上述QuestionRecord；模型不造question_id |
@@ -346,17 +348,29 @@ QA出题先走同一网关的`task=reference,output_schema_name=QuestionSet_v1`�
 
 ### C8.3 指标的含义与计算
 
-参考每条决策保留unit_id、api_id、action、status、statement、rationale/null和两类证据；多API结论拆原子记录。accepted/proposed/rejected/unknown四状态均在范围内；同一单元的同一方案按冻结时点最终可证状态标一次。没有最终采纳不等于无参考事实。
+参考每条决策保留unit_id、api_id、action、status、statement、rationale/null、rationale_status和两类证据；多API结论拆原子记录。accepted/proposed/rejected/unknown四状态均在范围内；同一单元的同一方案按冻结时点最终可证状态标一次。没有最终采纳不等于无参考事实。
 
 抽取匹配须同单元、同API、同动作/状态、结论语义等价。一条参考最多匹配一条预测，重复预测计FP；未匹配预测为FP，未匹配参考为FN。TP/FP/FN由程序汇总：P=TP/(TP+FP)，R=TP/(TP+FN)，F1=2TP/(2TP+FP+FN)。仅分母为零记null/N/A；有应抽事实而全漏的F1=0。报告overall及accepted子集，并注明**相对于模型参考标注**，不将模型一致性写成经人工验证的真实准确率。
 
 引文可定位率由程序逐字检查；结论/理由的语义支持由模型评审，supported/unsupported/unclear分别计数。代码状态报告相对于模型参考的正确数、可评样本数、未知/失败数及覆盖率；没有完整事件参考就不报事件召回率。
+
+另报**决策级理由覆盖率**，不改变上述决策P/R/F1：分母为可评参考中rationale_status=stated、理由及证据有效的决策总数；分子为其中成功一对一匹配预测，且预测理由与参考理由语义等价、全部得到原文支持的参考决策数。参考列有多个实质原因时须全部覆盖，不能仅命中其中一句便算完整；措辞不要求逐字相同。每条参考最多计1，整条决策未匹配、生产失败、空输出、理由为空或仅覆盖部分理由均计0，不从分母移除；分母为零记N/A。参考not_stated不进入此分母，参考unclear或参考生成/复核失败另列未评范围，不把它们当明确无理由。
+
+P6沿用Review_v1：对已匹配且参考明确有理由、预测理由非空的记录增加item_id=`rationale_coverage:<reference_id>`的finding；supported表示同时满足语义覆盖与原文支持，unsupported须说明遗漏或错误，unclear不记确认覆盖并单列。程序按匹配表直接处理漏抽/空理由，保存每条参考的覆盖判定和依据；缺少应有finding或评审失败经冻结重试仍未补齐时，总体理由覆盖率记N/A，并报告已评数/应评数，不能视为零错误。原有理由支持性判断单独保留，不把此处unsupported全部解释为编造理由。
+
+另列理由漏填数（参考stated且已匹配预测的rationale为空）、决策整体漏抽数（上述分母内的未匹配参考），以及理由状态错误数/可比较数（已匹配、参考状态为stated或not_stated的记录中，预测rationale_status与参考不同）。漏填与状态错误可能重叠，不相加为总错误数。P6在11月15日前试跑并冻结这些规则，P4提供原有全量预测、空输出及失败记录；仍由模型判断语义、程序计数，不引入人工评分。
 
 ### C8.4 下游对照
 
 BM25文本RAG与KG使用同一冻结原始来源池、相同问题和可见元数据、同一回答模型/提示/预算。默认P4 DeepSeek gateway生成回答，审阅GPT/DeepSeek也对两系统使用同一冻结评审配置。系统名对评审隐藏，两系统输出顺序随机化，保留盲化映射。生成和评审的输入/缓存分离，不让参考答案进入检索或图谱。
 
 BM25建议800字符/120重叠，不跨来源，保留source_id和偏移；两组上下文按相同渲染最多12000字符，容量不足在开发期同时调小并冻结。两组共享P2的resolve_question结果；KG无法路由如实记录，BM25仍可按相同原始问题检索，不强制基线弃答。交互补参若用于正式实验须两组同等提供。
+
+证据组采用固定OR口径：每个组代表一个应检索的证据要点，组内条目是可独立支持该要点的等价替代片段，命中任一条即可；需要共同出现的不同证据要点分成多个组，跨来源关系链逐环节建组，不把必须联合使用的片段当成替代项。每组最多计1，部分组命中只获得相应部分召回；answerable=false的题evidence_groups必须为空，不计入召回分母。
+
+“命中”依据经过排序、去重、统一渲染和预算截断后**实际送入回答模型的上下文**，不依据截断前候选或最终答案引文。组内某参考片段完整包含于同source_id的最终可见原文区间时由程序确认命中；其他等价片段按预先冻结的模型支持性规则判定并保存映射，对两系统同等处理。只返回图节点摘要、只出现来源ID或最终引用了未送入上下文的片段均不自动算检索命中；答案引文仍按返回断言的支持性另行评审。参考组判定unclear单列且不计确认命中；判定漏项/评审失败经冻结重试仍不齐时，总体证据组召回记N/A并报告可评覆盖。
+
+P2保证返回Evidence可映射到冻结source_id/哈希/start/end及原文；P6负责将两组检索结果转换为C7可引用上下文，并与P2在开发材料上固定各自排序（含同分规则）、映射、去重、渲染及截断办法，11月29日前连同方法冻结。两组不要求相同检索算法，但必须采用相同最终渲染与字符预算；计入预算的结构提示也须固定，裁剪原文须同步更新end/text且保持原文可定位。逐题保存查询及原始响应/候选、最终上下文与顺序、实际请求、规则版本和每组命中依据；仅位于截断前的证据不计命中，使指标能从归档输入复算。
 
 模型评审逐项核对参考事实覆盖、每条返回断言支持性、证据组命中和正确弃答；程序按原始判定汇总分子分母。正文由C7的全部claims生成，P6按原始顺序给每项赋item_id=`claim:<从0开始的序号>`，Review必须逐项给出supported/unsupported/unclear，不允许漏项或只评分有引文的句子。遗漏判定按冻结重试规则处理，仍缺失则记评审失败并单列可评覆盖；不能当零错误。可回答题的失败/空输出按零覆盖计入；无返回断言的支持错误率为N/A，并同时展示覆盖与弃答。新发现的等价证据按预定规则对两组一致处理，留修改记录。保留逐题结果，报告模型评审性质、成本与局限；不预设KG胜出。
 
@@ -377,6 +391,7 @@ P1 必须实现 `fixture` 命令生成下述相同的合成小世界，路径 `f
 - 另一 issue #3 正文 `Accepted: keep helper.`，API `toy.helper` 及三个 present 快照（`toy/util.py` 为 `def helper():\n    return 1\n`）；结论有证据、rationale=null、rationale_status=not_stated。另有 issue #4 `Could we remove helper?`，只能 proposed，不能当 accepted。
 - 必测：六类查询成功；不存在 API 的 empty；未知 query 的 unsupported；断库 error；错误证据偏移校验失败；解析失败不算删除；重复导入节点/边数均不变；无理由不等于无决策证据；fixture 不得进入正式评测。
 - 接口验收：toy.old的timeline须返回issue #1、PR #2、提交c、API及真实方向的三条链路关系和证据；在测试副本去掉Decision及其ABOUT/EVIDENCED_BY边后，这条已有修改链仍可返回。P4/P6以一真一假的两条回答断言验证正文保留两条且评分均覆盖；额外answer字段、弃答却带断言及Review漏项均须被识别。P6用QuestionSet_v1样例验证问题正文、程序赋ID、来源分组、保存与ReferenceQA_v1按ID衔接，开发/测试输出不能串目录。
+- 本版评测与采集验收：P4/P6将toy.old预测理由改为空而保留正确决策字段，验证决策F1不变、理由覆盖记0并记录漏填/状态错误；整条预测缺失时该参考仍在理由分母。P1用含普通评论、评审主体和行内回复的分页响应样例核对完整性，任一类采集失败不能标完整。P6验证“本主题无答案但池内另一来源有答案”不能标证据不足；同组替代证据命中一次、不同必要组分别计数、证据被预算截掉后不计命中。均在开发或合成材料上验证，不能为此修改正式预测。
 
 所有真实验收在 `pandas_v1` 独立重跑。数据节点少、关系为空或结果不如基线都如实记录；禁止为了验收凑边、造理由、让 fixture 冒充真实结果。
 
@@ -485,6 +500,7 @@ P1 必须实现 `fixture` 命令生成下述相同的合成小世界，路径 `f
 - 实现 `kgcourse.service.query(request: dict) -> dict` 与 `resolve_question(text,dataset_id)`；Request／Response 完整采用 C6，不能返回另一套自拟对象。
 - 问题解析使用固定别名、版本、Issue 编号及有限意图词；歧义返回 `ambiguous`、无法支持返回 `unsupported`，P6 的两组方法共享解析结果。
 - 六类响应快照写入 `data/<dataset_id>/exports/`；保留 `data_mode` 与实际查询时间，离线重放不报告为实时性能。
+- 与P6在11月29日前冻结KG结果到原文的映射及排序/同分规则；返回的Evidence须能定位冻结来源和区间。P6负责最终上下文的去重、统一渲染、预算截断及逐题存档，证据召回仅按最终可见上下文计算，不按图摘要或截断前候选计数。
 - 与 P5、P6 验证六类请求均可直接调用；确需调整接口时通过公共变更流程一次性同步。
 
 **产物：** 待创建的查询服务、请求／返回示例、语义说明、测试与联调记录。
@@ -501,7 +517,8 @@ P1 必须实现 `fixture` 命令生成下述相同的合成小世界，路径 `f
 - 由 P6 冻结实验数据和查询配置后，只处理明确缺陷；任何改变结果的修复都记录版本并通知重新运行受影响实验。
 - 记录节点与边的真实数量、数据缺口、无法查询的情况和查询耗时的测量条件。
 - 准备从交付数据重新建图的步骤及本地演示备用数据，禁止以 fixture 替代真实演示数据。
-- 12 月 13 日前配合实验复核，12 月 20 日前提交本体、导入与查询方法的报告素材。
+- 12 月 13 日前配合实验复核。
+- 11 月 29 日前提交本体、导入与查询方法草稿；12 月 13 日前交齐完整方法、查询案例、错误分析和可复现说明等报告素材；12 月 17 日前配合 P1 统稿；12 月 20 日前核对定稿。
 
 **产物：** 冻结的数据／代码版本说明、复现说明、联调记录、报告素材、可追溯图谱截图。
 
